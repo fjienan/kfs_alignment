@@ -1,0 +1,97 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+  - Class: rviz_common/Time
+    Name: Time
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Alpha: 0.5
+      Class: rviz_default_plugins/Grid
+      Color: 160; 160; 160
+      Name: Grid
+      Plane: XY
+      Plane Cell Count: 20
+      Reference Frame: <Fixed Frame>
+    - Class: rviz_default_plugins/TF
+      Frame Timeout: 15.0
+      Frames:
+        All Enabled: true
+      Marker Scale: 1.0
+      Name: TF
+      Show Arrows: true
+      Show Axes: true
+      Show Names: true
+      Tree:
+        {}
+      Update Interval: 0.0
+    - Class: rviz_default_plugins/MarkerArray
+      Name: Cube Markers
+      Topic: /cube_pose/markers
+      Queue Size: 10
+    - Class: rviz_default_plugins/Pose
+      Name: Cube Pose
+      Topic: /cube_pose/pose
+      Queue Size: 10
+      Shape: Arrow
+      Shaft Length: 0.25
+      Shaft Radius: 0.015
+      Head Length: 0.05
+      Head Radius: 0.03
+      Color: 255; 90; 0
+    - Class: rviz_default_plugins/Pose
+      Name: Fused Pose
+      Enabled: true
+      Topic: /cube_pose/fused_pose
+      Queue Size: 10
+      Shape: Arrow
+      Shaft Length: 0.25
+      Shaft Radius: 0.015
+      Head Length: 0.05
+      Head Radius: 0.03
+      Color: 0; 220; 220
+    - Class: rviz_default_plugins/Polygon
+      Name: Face Corners 3D
+      Topic: /cube_pose/face_corners_3d
+      Queue Size: 10
+      Color: 255; 255; 60
+      Alpha: 1.0
+    - Class: rviz_default_plugins/Image
+      Name: Debug Image
+      Topic: /cube_pose/visualization
+      Queue Size: 2
+      Normalize Range: false
+      Min Value: 0.0
+      Max Value: 1.0
+  Enabled: true
+  Global Options:
+    Background Color: 48; 48; 48
+    Fixed Frame: rgb_camera_link
+    Frame Rate: 30
+  Name: root
+  Tools:
+    - Class: rviz_default_plugins/Interact
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Select
+    - Class: rviz_default_plugins/FocusCamera
+    - Class: rviz_default_plugins/Measure
+    - Class: rviz_default_plugins/SetInitialPose
+      Topic: /initialpose
+    - Class: rviz_default_plugins/SetGoal
+      Topic: /goal_pose
+  Transformation:
+    Current: rviz_default_plugins/TF
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Distance: 1.5
+      Focal Point: 0; 0; 0
+      Name: Current View
+      Pitch: 0.6
+      Target Frame: <Fixed Frame>
+      Yaw: 0.8
+Window Geometry:
+  Height: 900
+  Width: 1400
+  X: 50
+  Y: 50

@@ -1,0 +1,98 @@
+cube_pose_estimator:
+  ros__parameters:
+    # ===== Input =====
+    # mode: "topic" (subscribe sensor_msgs/Image) or "usb" (cv2.VideoCapture)
+    input:
+      mode: "usb"
+    # 改成你的视频流话题，比如 /camera/image_raw
+    image_topic: "/camera/color/image_raw"
+
+    usb:
+      camera_id: 1
+      width: 128
+      height: 1024
+      fps: 30.0
+      backend: "any"   # any|v4l2 (Linux). If unsure, keep "any".
+      # Camera controls (best-effort; depends on driver/camera)
+      auto_exposure: false
+      exposure: -2.0   # only used when auto_exposure=false; units are backend-dependent
+      gain: -1.0       # optional; set >=0 to request a gain value
+      use_grayscale: false
+
+    # ===== Camera intrinsics (OpenCV pinhole) =====
+    camera:
+      intrinsics:
+        fx: 611.803
+        fy: 611.758
+        cx: 637.162
+        cy: 369.382
+      # OpenCV distortion coefficients: [k1, k2, p1, p2, k3]
+      distortion: [0.0, 0.0, 0.0, 0.0, 0.0]
+
+    # ===== Target geometry =====
+    target:
+      cube_size_mm: 350.0
+
+    # ===== YOLO (Ultralytics) cascade detector =====
+    yolo:
+      obb_model_path: "/home/ares/kfs_alignment/src/kfs_alignment/models/obb/best.pt"
+      pose_model_path: "/home/ares/kfs_alignment/src/kfs_alignment/models/pose/best.pt"
+      conf_threshold: 0.25
+      iou_threshold: 0.7
+      device: "cuda"        # "cuda" or "cpu" or "0" (GPU id)
+      pad_ratio: 1.4
+      warp_size: [256, 256] # [width, height]
+      # 推理分辨率（imgsz）
+      # - 0 表示使用 Ultralytics 默认值
+      # - 建议 Stage2(Pose) 用 warp_size（默认我们代码会自动用 warp_size[0]）
+      imgsz_obb: 0
+      imgsz_pose: 0
+
+    # ===== PnP =====
+    pnp:
+      method: "IPPE_SQUARE"   # IPPE_SQUARE / IPPE / ITERATIVE / SQPNP
+      # 当该面在图像上太小（像素级）时，PnP 深度会非常病态：角点抖一点，tvec/中心就会跳很大。
+      # 设为 0 表示禁用；推荐先从 30px 左右开始试（取决于你的分辨率/噪声/目标大小）。
+      min_face_size_px: 30.0
+      reproj_error_max_px: 100.0
+      # 单帧 BA（重投影 LM 优化）：在 solvePnP 初值后再做一次 LM refine
+      refine: "LM"          # NONE | LM
+      refine_iterations: 20
+      refine_eps: 1.0e-6
+      # 多帧 BA：使用最近 N 帧角点共同优化“同一位姿”（静止目标更适用；会引入少量滞后）
+      ba_window_size: 1
+
+    debug:
+      # PnP 失败时打印诊断信息（建议打开，用于定位“角点误差 vs 内参/畸变/尺寸不匹配”）
+      log_pnp_failures: true
+      pnp_failure_log_interval_sec: 1.0
+      log_pnp_residuals: true
+      # PnP 成功时打印核心数值（用于观察 tvec/中心点是否抖动）
+      log_pnp_success: true
+      pnp_success_log_interval_sec: 0.5
+      # YOLO 输出（4个角点像素坐标 TL/TR/BR/BL）
+      log_yolo_points: true
+      yolo_log_interval_sec: 0.5
+      yolo_log_as_int: true
+
+    # ===== Frames & outputs =====
+    frame_ids:
+      camera_frame: "rgb_camera_link"
+      cube_center_frame: "cube_center"
+
+    publish:
+      visualization: true
+      pose: true
+      face_corners_3d: true
+      tf: true
+      markers: true
+
+    visualization:
+      axes_length_mm: 50.0
+      show_fps: true
+
+    markers:
+      topic: "/cube_pose/markers"
+      cube_alpha: 0.35
+      cube_color: [0.1, 0.6, 1.0]      # RGB in [0,1]
+      center_color: [1.0, 0.2, 0.2]    # RGB in [0,1]

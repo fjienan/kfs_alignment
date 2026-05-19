@@ -1,0 +1,70 @@
+[0.437s] Invoking command in '/home/ares/kfs_alignment/src/kfs_alignment': PYTHONPATH=/home/ares/kfs_alignment/build/kfs_alignment/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/ares/kfs_alignment/install/kfs_alignment/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/kfs_alignment build --build-base /home/ares/kfs_alignment/build/kfs_alignment/build install --record /home/ares/kfs_alignment/build/kfs_alignment/install.log --single-version-externally-managed install_data
+[0.591s] running egg_info
+[0.591s] creating ../../build/kfs_alignment/kfs_alignment.egg-info
+[0.592s] writing ../../build/kfs_alignment/kfs_alignment.egg-info/PKG-INFO
+[0.592s] writing dependency_links to ../../build/kfs_alignment/kfs_alignment.egg-info/dependency_links.txt
+[0.592s] writing entry points to ../../build/kfs_alignment/kfs_alignment.egg-info/entry_points.txt
+[0.592s] writing requirements to ../../build/kfs_alignment/kfs_alignment.egg-info/requires.txt
+[0.592s] writing top-level names to ../../build/kfs_alignment/kfs_alignment.egg-info/top_level.txt
+[0.592s] writing manifest file '../../build/kfs_alignment/kfs_alignment.egg-info/SOURCES.txt'
+[0.593s] reading manifest file '../../build/kfs_alignment/kfs_alignment.egg-info/SOURCES.txt'
+[0.593s] writing manifest file '../../build/kfs_alignment/kfs_alignment.egg-info/SOURCES.txt'
+[0.593s] running build
+[0.593s] running build_py
+[0.593s] creating /home/ares/kfs_alignment/build/kfs_alignment/build
+[0.593s] creating /home/ares/kfs_alignment/build/kfs_alignment/build/lib
+[0.593s] creating /home/ares/kfs_alignment/build/kfs_alignment/build/lib/kfs_alignment
+[0.594s] copying kfs_alignment/pose_fusion_node.py -> /home/ares/kfs_alignment/build/kfs_alignment/build/lib/kfs_alignment
+[0.594s] copying kfs_alignment/yolo_detector_grey.py -> /home/ares/kfs_alignment/build/kfs_alignment/build/lib/kfs_alignment
+[0.594s] copying kfs_alignment/geometry_utils.py -> /home/ares/kfs_alignment/build/kfs_alignment/build/lib/kfs_alignment
+[0.594s] copying kfs_alignment/cube_pose_node.py -> /home/ares/kfs_alignment/build/kfs_alignment/build/lib/kfs_alignment
+[0.594s] copying kfs_alignment/pnp_solver.py -> /home/ares/kfs_alignment/build/kfs_alignment/build/lib/kfs_alignment
+[0.594s] copying kfs_alignment/__init__.py -> /home/ares/kfs_alignment/build/kfs_alignment/build/lib/kfs_alignment
+[0.594s] copying kfs_alignment/yolo_detector.py -> /home/ares/kfs_alignment/build/kfs_alignment/build/lib/kfs_alignment
+[0.594s] copying kfs_alignment/kfs_align_controller_node.py -> /home/ares/kfs_alignment/build/kfs_alignment/build/lib/kfs_alignment
+[0.594s] running install
+[0.594s] running install_lib
+[0.594s] creating /home/ares/kfs_alignment/install/kfs_alignment/lib/python3.10/site-packages/kfs_alignment
+[0.594s] copying /home/ares/kfs_alignment/build/kfs_alignment/build/lib/kfs_alignment/pose_fusion_node.py -> /home/ares/kfs_alignment/install/kfs_alignment/lib/python3.10/site-packages/kfs_alignment
+[0.595s] copying /home/ares/kfs_alignment/build/kfs_alignment/build/lib/kfs_alignment/yolo_detector_grey.py -> /home/ares/kfs_alignment/install/kfs_alignment/lib/python3.10/site-packages/kfs_alignment
+[0.595s] copying /home/ares/kfs_alignment/build/kfs_alignment/build/lib/kfs_alignment/geometry_utils.py -> /home/ares/kfs_alignment/install/kfs_alignment/lib/python3.10/site-packages/kfs_alignment
+[0.595s] copying /home/ares/kfs_alignment/build/kfs_alignment/build/lib/kfs_alignment/cube_pose_node.py -> /home/ares/kfs_alignment/install/kfs_alignment/lib/python3.10/site-packages/kfs_alignment
+[0.595s] copying /home/ares/kfs_alignment/build/kfs_alignment/build/lib/kfs_alignment/pnp_solver.py -> /home/ares/kfs_alignment/install/kfs_alignment/lib/python3.10/site-packages/kfs_alignment
+[0.595s] copying /home/ares/kfs_alignment/build/kfs_alignment/build/lib/kfs_alignment/__init__.py -> /home/ares/kfs_alignment/install/kfs_alignment/lib/python3.10/site-packages/kfs_alignment
+[0.595s] copying /home/ares/kfs_alignment/build/kfs_alignment/build/lib/kfs_alignment/yolo_detector.py -> /home/ares/kfs_alignment/install/kfs_alignment/lib/python3.10/site-packages/kfs_alignment
+[0.595s] copying /home/ares/kfs_alignment/build/kfs_alignment/build/lib/kfs_alignment/kfs_align_controller_node.py -> /home/ares/kfs_alignment/install/kfs_alignment/lib/python3.10/site-packages/kfs_alignment
+[0.595s] byte-compiling /home/ares/kfs_alignment/install/kfs_alignment/lib/python3.10/site-packages/kfs_alignment/pose_fusion_node.py to pose_fusion_node.cpython-310.pyc
+[0.596s] byte-compiling /home/ares/kfs_alignment/install/kfs_alignment/lib/python3.10/site-packages/kfs_alignment/yolo_detector_grey.py to yolo_detector_grey.cpython-310.pyc
+[0.597s] byte-compiling /home/ares/kfs_alignment/install/kfs_alignment/lib/python3.10/site-packages/kfs_alignment/geometry_utils.py to geometry_utils.cpython-310.pyc
+[0.598s] byte-compiling /home/ares/kfs_alignment/install/kfs_alignment/lib/python3.10/site-packages/kfs_alignment/cube_pose_node.py to cube_pose_node.cpython-310.pyc
+[0.601s] byte-compiling /home/ares/kfs_alignment/install/kfs_alignment/lib/python3.10/site-packages/kfs_alignment/pnp_solver.py to pnp_solver.cpython-310.pyc
+[0.602s] byte-compiling /home/ares/kfs_alignment/install/kfs_alignment/lib/python3.10/site-packages/kfs_alignment/__init__.py to __init__.cpython-310.pyc
+[0.602s] byte-compiling /home/ares/kfs_alignment/install/kfs_alignment/lib/python3.10/site-packages/kfs_alignment/yolo_detector.py to yolo_detector.cpython-310.pyc
+[0.603s] byte-compiling /home/ares/kfs_alignment/install/kfs_alignment/lib/python3.10/site-packages/kfs_alignment/kfs_align_controller_node.py to kfs_align_controller_node.cpython-310.pyc
+[0.603s] running install_data
+[0.603s] creating /home/ares/kfs_alignment/install/kfs_alignment/share/ament_index
+[0.604s] creating /home/ares/kfs_alignment/install/kfs_alignment/share/ament_index/resource_index
+[0.604s] creating /home/ares/kfs_alignment/install/kfs_alignment/share/ament_index/resource_index/packages
+[0.604s] copying resource/kfs_alignment -> /home/ares/kfs_alignment/install/kfs_alignment/share/ament_index/resource_index/packages
+[0.604s] copying package.xml -> /home/ares/kfs_alignment/install/kfs_alignment/share/kfs_alignment
+[0.604s] creating /home/ares/kfs_alignment/install/kfs_alignment/share/kfs_alignment/config
+[0.604s] copying config/cube_pose_fusion.yaml -> /home/ares/kfs_alignment/install/kfs_alignment/share/kfs_alignment/config
+[0.604s] copying config/cube_pose_estimator.rviz -> /home/ares/kfs_alignment/install/kfs_alignment/share/kfs_alignment/config
+[0.604s] copying config/cube_pose_estimator.yaml -> /home/ares/kfs_alignment/install/kfs_alignment/share/kfs_alignment/config
+[0.604s] creating /home/ares/kfs_alignment/install/kfs_alignment/share/kfs_alignment/launch
+[0.604s] copying launch/kfs_align.launch.py -> /home/ares/kfs_alignment/install/kfs_alignment/share/kfs_alignment/launch
+[0.604s] copying launch/cube_pose_estimator_with_fusion.launch.py -> /home/ares/kfs_alignment/install/kfs_alignment/share/kfs_alignment/launch
+[0.604s] creating /home/ares/kfs_alignment/install/kfs_alignment/share/kfs_alignment/models
+[0.604s] creating /home/ares/kfs_alignment/install/kfs_alignment/share/kfs_alignment/models/obb
+[0.604s] copying models/obb/best.pt -> /home/ares/kfs_alignment/install/kfs_alignment/share/kfs_alignment/models/obb
+[0.606s] creating /home/ares/kfs_alignment/install/kfs_alignment/share/kfs_alignment/models/pose
+[0.606s] copying models/pose/best.pt -> /home/ares/kfs_alignment/install/kfs_alignment/share/kfs_alignment/models/pose
+[0.616s] creating /home/ares/kfs_alignment/install/kfs_alignment/share/kfs_alignment/rviz
+[0.616s] running install_egg_info
+[0.617s] Copying ../../build/kfs_alignment/kfs_alignment.egg-info to /home/ares/kfs_alignment/install/kfs_alignment/lib/python3.10/site-packages/kfs_alignment-0.0.0-py3.10.egg-info
+[0.617s] running install_scripts
+[0.629s] Installing cube_pose_node script to /home/ares/kfs_alignment/install/kfs_alignment/lib/kfs_alignment
+[0.629s] Installing kfs_align_controller_node script to /home/ares/kfs_alignment/install/kfs_alignment/lib/kfs_alignment
+[0.629s] Installing pose_fusion_node script to /home/ares/kfs_alignment/install/kfs_alignment/lib/kfs_alignment
+[0.630s] writing list of installed files to '/home/ares/kfs_alignment/build/kfs_alignment/install.log'
+[0.642s] Invoked command in '/home/ares/kfs_alignment/src/kfs_alignment' returned '0': PYTHONPATH=/home/ares/kfs_alignment/build/kfs_alignment/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/ares/kfs_alignment/install/kfs_alignment/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/kfs_alignment build --build-base /home/ares/kfs_alignment/build/kfs_alignment/build install --record /home/ares/kfs_alignment/build/kfs_alignment/install.log --single-version-externally-managed install_data

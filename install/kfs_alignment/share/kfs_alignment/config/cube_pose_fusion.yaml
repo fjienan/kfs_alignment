@@ -1,0 +1,27 @@
+cube_pose_fusion:
+  ros__parameters:
+    input:
+      pose_topic: "/cube_pose/pose"
+    imu:
+      topic: "/imu/data"
+    output:
+      pose_topic: "/cube_pose/fused_pose"
+
+    fuse:
+      position:
+        enable: true
+        # NOTE: 默认 false，因为 IMU 加速度一般在 imu_link 下，还需要 TF/外参对齐到 pose 的 frame 才能正确用作预测输入。
+        use_imu_accel: false
+        # 视觉位置测量噪声（米）：越大 -> 更信 IMU 预测；越小 -> 更信视觉测量
+        sigma_meas_m: 0.02
+        # 过程噪声（等效加速度标准差）：越大 -> 更“跟得上”快速变化但更抖
+        sigma_accel_mps2: 2.0
+        # 输出额外平滑窗口（简单均值）；1 表示关闭
+        output_smooth_window: 1
+
+      orientation:
+        enable: true
+        # imu_weight=1 -> 全信 IMU；imu_weight=0 -> 全信视觉
+        imu_weight: 0.9
+        warn_on_frame_mismatch: true
+

@@ -1,0 +1,5 @@
+[console_scripts]
+cube_pose_node = kfs_alignment.cube_pose_node:main
+kfs_align_controller_node = kfs_alignment.kfs_align_controller_node:main
+pose_fusion_node = kfs_alignment.pose_fusion_node:main
+

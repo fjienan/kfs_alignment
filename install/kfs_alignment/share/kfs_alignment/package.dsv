@@ -1,0 +1,6 @@
+source;share/kfs_alignment/hook/pythonpath.ps1
+source;share/kfs_alignment/hook/pythonpath.dsv
+source;share/kfs_alignment/hook/pythonpath.sh
+source;share/kfs_alignment/hook/ament_prefix_path.ps1
+source;share/kfs_alignment/hook/ament_prefix_path.dsv
+source;share/kfs_alignment/hook/ament_prefix_path.sh
