@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import Twist, PoseStamped
+from geometry_msgs.msg import PoseStamped
+from std_msgs.msg import Float32MultiArray
 from scipy.spatial.transform import Rotation as R
 import numpy as np
 
@@ -32,10 +33,11 @@ class KFSAlignController(Node):
         super().__init__('kfs_align_controller')
 
         # === 1. 声明并读取参数 ===
-        self.declare_parameter("target.distance", 1.2)     # 目标停止距离 (米)
-        self.declare_parameter("target.yaw", 0.0)          # 目标偏航角设定为 0.0
+        self.declare_parameter("target.distance", 0.7)     # 目标停止距离 (米)
+        self.declare_parameter("target.yaw", 0.0)          # 目标偏航角
+        self.declare_parameter("target.y_offset", 0.0)     # Y轴物理偏置，调整左右归零点
         
-        # 限制底盘与升降机构的最大速度
+        # 限制底盘最大速度
         self.declare_parameter("limit.linear_x", 0.8)      # m/s
         self.declare_parameter("limit.linear_y", 0.8)      # m/s
         self.declare_parameter("limit.linear_z", 0.5)      # m/s
@@ -50,21 +52,21 @@ class KFSAlignController(Node):
         self._load_parameters()
 
         # === 2. 初始化 ROS 接口 ===
-        self.cmd_pub = self.create_publisher(Twist, '/cmd_vel', 10)
+        self.cmd_pub = self.create_publisher(Float32MultiArray, 't0x0101_action', 10)
         self.pose_sub = self.create_subscription(PoseStamped, '/cube_pose/pose', self.pose_callback, 10)
 
-        # === 3. 时间与状态管理 ===
         self.last_time = self.get_clock().now()
         self.last_pose_time = self.get_clock().now()
         
-        # 安全看门狗 (Watchdog)
+        # 安全看门狗
         self.watchdog_timer = self.create_timer(0.1, self.watchdog_callback)
 
-        self.get_logger().info("KFS 对齐控制节点已启动！")
+        self.get_logger().info("KFS 视觉对齐节点已启动！采用标准 FLU 及 [vx, vy, wz] 数组下发。")
 
     def _load_parameters(self):
         self.target_dist = self.get_parameter("target.distance").value
         self.target_yaw = self.get_parameter("target.yaw").value
+        self.target_y_offset = self.get_parameter("target.y_offset").value
         
         lim_x = self.get_parameter("limit.linear_x").value
         lim_y = self.get_parameter("limit.linear_y").value
@@ -83,65 +85,66 @@ class KFSAlignController(Node):
 
     def pose_callback(self, msg: PoseStamped):
         current_time = self.get_clock().now()
-        self.last_pose_time = current_time
-
         dt = (current_time - self.last_time).nanoseconds / 1e9
         self.last_time = current_time
+        self.last_pose_time = current_time
+        
+        dt = np.clip(dt, 0.0, 0.1)
         if dt <= 0:
             return
 
-        # 1. 提取位置误差
-        current_x = msg.pose.position.x
-        current_y = msg.pose.position.y
-        current_z = msg.pose.position.z
-
-        error_x = current_x - self.target_dist 
-        error_y = current_y - 0.0 
-        error_z = current_z - 0.0 
-
-        # 2. 提取姿态误差 (切换顺规解决万向节死锁)
+        # ========================================================
+        # 1. 提取上游已经转换好的 FLU 坐标
+        # ========================================================
+        raw_x = msg.pose.position.x  # 前后深度
+        raw_y = msg.pose.position.y  # 左右偏离
+        
+        # 提取旋转 (上游已经将其转至 FLU 坐标系)
         q = [msg.pose.orientation.x, msg.pose.orientation.y, 
              msg.pose.orientation.z, msg.pose.orientation.w]
-        r = R.from_quat(q)
+        rx, ry, rz = R.from_quat(q).as_euler('xyz', degrees=False)
+        raw_yaw = rz  # FLU 中绕 Z 轴即为 Yaw
         
-        # 【核心修改】将顺规从 'zyx' 变更为 'xyz'。
-        # 此时返回值的物理含义变更为：roll, pitch, yaw
-        roll, pitch, yaw = r.as_euler('xyz', degrees=False)
+        # ========================================================
+        # 2. 物理翻转开关 (治各种不服)
+        # ========================================================
+        current_x = raw_x         # 深度一般没问题
+        current_y = raw_y        # 👈 你观测到左边是负数，所以加个负号强制归正
+        current_yaw = raw_yaw + np.pi/2     # 偏航角暂不翻转，如果底盘自转反了，改成 -raw_yaw
+
+        # 计算误差
+        error_x = current_x - self.target_dist 
+        error_y = current_y - self.target_y_offset 
+        error_yaw = (self.target_yaw - current_yaw + np.pi) % (2 * np.pi) - np.pi
+
+        # ========================================================
+        # 3. PID 计算
+        # ========================================================
+        out_vx = self.pid_x.compute(error_x, dt)
+        out_vy = self.pid_y.compute(error_y, dt)
+        out_wz = self.pid_yaw.compute(error_yaw, dt)
+
+        # ========================================================
+        # 4. 打包发送 (严格遵照队友代码的底层数组解析顺序)
+        # ========================================================
+        action_msg = Float32MultiArray()
         
-        # 移除原先容易引发漂移的硬编码夹角补偿 (+np.pi/2)，直接让 current_yaw 接收最纯净的裸数据
-        current_yaw = yaw + np.pi/2
+        # 队友底层逻辑：坑位0是vx，坑位1是vy，坑位2是wz
+        action_msg.data = [float(out_vx), float(out_vy), float(out_wz)] 
         
-        # 打印纯净的欧拉角，用于真车对齐时捕获基准数据
+        self.cmd_pub.publish(action_msg)
+
         self.get_logger().info(
-            f"Pose-> Roll:{roll:.2f} | Pitch:{pitch:.2f} | Current_Yaw:{current_yaw:.2f}"
-        )
-
-        # 计算基本偏航误差
-        error_yaw = self.target_yaw - current_yaw 
-
-        # 角度归一化 (-pi 到 pi 之间)，强制小车旋转走最短路径
-        error_yaw = (error_yaw + np.pi) % (2 * np.pi) - np.pi
-
-        # 3. PID 计算输出速度
-        cmd = Twist()
-        cmd.linear.x = self.pid_x.compute(error_x, dt)
-        cmd.linear.y = self.pid_y.compute(error_y, dt)
-        cmd.linear.z = self.pid_z.compute(error_z, dt)
-        cmd.angular.z = self.pid_yaw.compute(error_yaw, dt)
-
-        # 4. 发布速度
-        self.cmd_pub.publish(cmd)
-
-        # 打印实时误差状态
-        self.get_logger().info(
-            f"Err-> X:{error_x:.2f} Y:{error_y:.2f} Z:{error_z:.2f} | YawErr:{error_yaw:.2f} -> Output_wz:{cmd.angular.z:.2f}"
+            f"Err-> X:{error_x:.2f} Y:{error_y:.2f} Yaw:{error_yaw:.2f} || 发送:[vx:{out_vx:.2f}, vy:{out_vy:.2f}, wz:{out_wz:.2f}]"
         )
 
     def watchdog_callback(self):
         time_since_last_pose = (self.get_clock().now() - self.last_pose_time).nanoseconds / 1e9
         if time_since_last_pose > 0.5:
-            stop_cmd = Twist()
-            self.cmd_pub.publish(stop_cmd)
+            # 丢失目标超过 0.5 秒，下发全零数组紧急停车
+            stop_msg = Float32MultiArray()
+            stop_msg.data = [0.0, 0.0, 0.0]
+            self.cmd_pub.publish(stop_msg)
 
 def main(args=None):
     rclpy.init(args=args)
