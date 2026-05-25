@@ -33,55 +33,64 @@ class KFSAlignController(Node):
         super().__init__('kfs_align_controller')
 
         # === 1. 声明并读取参数 ===
-        self.declare_parameter("target.distance", 0.7)     # 目标停止距离 (米)
+        self.declare_parameter("target.distance", 0.8)     # 目标停止距离 (米)
         self.declare_parameter("target.yaw", 0.0)          # 目标偏航角
-        self.declare_parameter("target.y_offset", 0.0)     # Y轴物理偏置，调整左右归零点
-        
+        self.declare_parameter("target.y_offset", 0.0)     # Y轴物理偏置
+        self.declare_parameter("target.z_offset", 0.0)     # Z轴物理偏置 (预期KFS在相机画面中的高度)
+
+        # 👇【新增】抬升机构的安全限幅 (单位：mm)
+        self.declare_parameter("limit.lift_max_mm", 150.0) # 最大伸出高度 (请根据实际机械结构修改)
+        self.declare_parameter("limit.lift_min_mm", 0.0)   # 最小伸出高度
+
         # 限制底盘最大速度
-        self.declare_parameter("limit.linear_x", 0.8)      # m/s
-        self.declare_parameter("limit.linear_y", 0.8)      # m/s
-        self.declare_parameter("limit.linear_z", 0.5)      # m/s
+        self.declare_parameter("limit.linear_x", 0.5)      # m/s
+        self.declare_parameter("limit.linear_y", 0.5)      # m/s
+        self.declare_parameter("limit.linear_z", 0.1)      # m/s (Z轴速度通常要限制得更小，因为抬升慢)
         self.declare_parameter("limit.angular_z", 1.0)     # rad/s
 
         # PID 参数
-        self.declare_parameter("pid.x", [1.5, 0.0, 0.1])
-        self.declare_parameter("pid.y", [1.5, 0.0, 0.15])
-        self.declare_parameter("pid.z", [2.0, 0.0, 0.2])
-        self.declare_parameter("pid.yaw", [1.2, 0.0, 0.1])
+        self.declare_parameter("pid.x", [1.0, 0.0, 0.1])
+        self.declare_parameter("pid.y", [1.0, 0.0, 0.15])
+        self.declare_parameter("pid.z", [0.5, 0.0, 0.1])   # Z轴建议用小一点的P参数
+        self.declare_parameter("pid.yaw", [1.0, 0.0, 0.1])
 
         self._load_parameters()
 
         # === 2. 初始化 ROS 接口 ===
         self.cmd_pub = self.create_publisher(Float32MultiArray, 't0x0101_action', 10)
+        self.lift_pub = self.create_publisher(Float32MultiArray, 't0x0102_', 10) # 轮子高度话题
+        
         self.pose_sub = self.create_subscription(PoseStamped, '/cube_pose/pose', self.pose_callback, 10)
 
         self.last_time = self.get_clock().now()
         self.last_pose_time = self.get_clock().now()
         
+        # 👇 维护一个状态变量，记录当前的抬升绝对高度 (初始默认0)
+        self.current_lift_height_mm = 0.0 
+
         # 安全看门狗
         self.watchdog_timer = self.create_timer(0.1, self.watchdog_callback)
 
-        self.get_logger().info("KFS 视觉对齐节点已启动！采用标准 FLU 及 [vx, vy, wz] 数组下发。")
+        self.get_logger().info("KFS 视觉对齐节点已启动！三轴全闭环 (包含积分高度抬升)！")
 
     def _load_parameters(self):
         self.target_dist = self.get_parameter("target.distance").value
         self.target_yaw = self.get_parameter("target.yaw").value
         self.target_y_offset = self.get_parameter("target.y_offset").value
+        self.target_z_offset = self.get_parameter("target.z_offset").value
+        
+        self.lift_max_mm = self.get_parameter("limit.lift_max_mm").value
+        self.lift_min_mm = self.get_parameter("limit.lift_min_mm").value
         
         lim_x = self.get_parameter("limit.linear_x").value
         lim_y = self.get_parameter("limit.linear_y").value
         lim_z = self.get_parameter("limit.linear_z").value
         lim_yaw = self.get_parameter("limit.angular_z").value
 
-        pid_x_params = self.get_parameter("pid.x").value
-        pid_y_params = self.get_parameter("pid.y").value
-        pid_z_params = self.get_parameter("pid.z").value
-        pid_yaw_params = self.get_parameter("pid.yaw").value
-
-        self.pid_x = PIDController(*pid_x_params, lim_x)
-        self.pid_y = PIDController(*pid_y_params, lim_y)
-        self.pid_z = PIDController(*pid_z_params, lim_z)
-        self.pid_yaw = PIDController(*pid_yaw_params, lim_yaw)
+        self.pid_x = PIDController(*self.get_parameter("pid.x").value, lim_x)
+        self.pid_y = PIDController(*self.get_parameter("pid.y").value, lim_y)
+        self.pid_z = PIDController(*self.get_parameter("pid.z").value, lim_z)
+        self.pid_yaw = PIDController(*self.get_parameter("pid.yaw").value, lim_yaw)
 
     def pose_callback(self, msg: PoseStamped):
         current_time = self.get_clock().now()
@@ -90,61 +99,75 @@ class KFSAlignController(Node):
         self.last_pose_time = current_time
         
         dt = np.clip(dt, 0.0, 0.1)
-        if dt <= 0:
-            return
+        if dt <= 0: return
 
         # ========================================================
         # 1. 提取上游已经转换好的 FLU 坐标
         # ========================================================
         raw_x = msg.pose.position.x  # 前后深度
         raw_y = msg.pose.position.y  # 左右偏离
+        raw_z = msg.pose.position.z  # 👇 提取高度偏离 (FLU坐标系中，Z正方向朝上)
         
-        # 提取旋转 (上游已经将其转至 FLU 坐标系)
         q = [msg.pose.orientation.x, msg.pose.orientation.y, 
              msg.pose.orientation.z, msg.pose.orientation.w]
         rx, ry, rz = R.from_quat(q).as_euler('xyz', degrees=False)
-        raw_yaw = rz  # FLU 中绕 Z 轴即为 Yaw
+        raw_yaw = rz  
         
         # ========================================================
-        # 2. 物理翻转开关 (治各种不服)
+        # 2. 物理翻转开关
         # ========================================================
-        current_x = raw_x         # 深度一般没问题
-        current_y = raw_y        # 👈 你观测到左边是负数，所以加个负号强制归正
-        current_yaw = raw_yaw + np.pi/2     # 偏航角暂不翻转，如果底盘自转反了，改成 -raw_yaw
+        current_x = raw_x         
+        current_y = raw_y        
+        current_z = raw_z         # 如果发现高度调反了，就给它加个负号
+        current_yaw = raw_yaw + np.pi/2     
 
         # 计算误差
         error_x = current_x - self.target_dist 
         error_y = current_y - self.target_y_offset 
+        error_z = current_z - self.target_z_offset  # 计算高度误差
         error_yaw = (self.target_yaw - current_yaw + np.pi) % (2 * np.pi) - np.pi
 
         # ========================================================
-        # 3. PID 计算
+        # 3. PID 计算各个轴的速度
         # ========================================================
         out_vx = self.pid_x.compute(error_x, dt)
         out_vy = self.pid_y.compute(error_y, dt)
+        out_vz = self.pid_z.compute(error_z, dt)  # 👇 Z轴输出的是垂直移动速度 (m/s)
         out_wz = self.pid_yaw.compute(error_yaw, dt)
 
         # ========================================================
-        # 4. 打包发送 (严格遵照队友代码的底层数组解析顺序)
+        # 4. 速度指令下发 (前后、左右、偏航) -> t0x0101_action
         # ========================================================
         action_msg = Float32MultiArray()
-        
-        # 队友底层逻辑：坑位0是vx，坑位1是vy，坑位2是wz
         action_msg.data = [float(out_vx), float(out_vy), float(out_wz)] 
-        
         self.cmd_pub.publish(action_msg)
 
+        # ========================================================
+        # 5. 👇【高度闭环核心】速度积分，转换为绝对高度 (mm) -> t0x0102_
+        # ========================================================
+        # 逻辑：当前高度 = 上一帧高度 + 速度(m/s) * 时间(s) * 1000
+        self.current_lift_height_mm += (out_vz * dt) * 1000.0
+        
+        # 结构保护：限制伸出长度在安全范围内
+        self.current_lift_height_mm = np.clip(self.current_lift_height_mm, self.lift_min_mm, self.lift_max_mm)
+        
+        lift_msg = Float32MultiArray()
+        h = float(self.current_lift_height_mm)
+        lift_msg.data = [h, h, h, h]
+        self.lift_pub.publish(lift_msg)
+
         self.get_logger().info(
-            f"Err-> X:{error_x:.2f} Y:{error_y:.2f} Yaw:{error_yaw:.2f} || 发送:[vx:{out_vx:.2f}, vy:{out_vy:.2f}, wz:{out_wz:.2f}]"
+            f"Err-> X:{error_x:.2f} Y:{error_y:.2f} Z:{error_z:.2f} Yaw:{error_yaw:.2f} || 发送速度:[vx:{out_vx:.2f}, vy:{out_vy:.2f}, wz:{out_wz:.2f}] || 抬升:{h:.1f}mm"
         )
 
     def watchdog_callback(self):
         time_since_last_pose = (self.get_clock().now() - self.last_pose_time).nanoseconds / 1e9
         if time_since_last_pose > 0.5:
-            # 丢失目标超过 0.5 秒，下发全零数组紧急停车
+            # 丢失目标紧急停车
             stop_msg = Float32MultiArray()
             stop_msg.data = [0.0, 0.0, 0.0]
             self.cmd_pub.publish(stop_msg)
+            # 注：这里保持当前高度不变，防止突然砸落
 
 def main(args=None):
     rclpy.init(args=args)
