@@ -35,8 +35,8 @@ cube_pose_estimator:
 
     # ===== YOLO (Ultralytics) cascade detector =====
     yolo:
-      obb_model_path: "/home/ares/kfs_alignment/src/kfs_alignment/models/obb/best.pt"
-      pose_model_path: "/home/ares/kfs_alignment/src/kfs_alignment/models/pose/best.pt"
+      obb_model_path: "/home/ares/kfs_alignment/src/kfs_alignment/models/grey/obb/best.pt"
+      pose_model_path: "/home/ares/kfs_alignment/src/kfs_alignment/models/grey/pose/best.pt"
       conf_threshold: 0.25
       iou_threshold: 0.7
       device: "cuda"        # "cuda" or "cpu" or "0" (GPU id)

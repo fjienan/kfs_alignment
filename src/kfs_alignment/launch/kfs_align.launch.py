@@ -47,7 +47,7 @@ def generate_launch_description() -> LaunchDescription:
             ),
             DeclareLaunchArgument(
                 "use_grayscale",
-                default_value="false",
+                default_value="true",
                 description="Whether to capture/process images in grayscale mode.",
             ),
             

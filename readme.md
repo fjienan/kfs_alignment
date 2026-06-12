@@ -80,7 +80,8 @@ ros2 launch kfs_alignment kfs_align.launch.py
 
 | 输出话题名称 | 消息类型 (Message Type) | 作用说明 |
 | :--- | :--- | :--- |
-| `/cmd_vel` | `geometry_msgs/msg/Twist` | 向底盘下发全向移动速度（含 $v_x, v_y, v_z$ 与角速度 $\omega_z$） |
+| `t0x0101_action` | `std_msgs/msg/Float32MultiArray` | 向底盘下发全向移动速度 `[vx, vy, wz]`（前后、左右、偏航） |
+| `t0x0102_` | `std_msgs/msg/Float32MultiArray` | 向抬升机构下发四轮绝对高度 `[h, h, h, h]`（单位：mm，由 Z 轴速度积分闭环解算） |
 
 ---
 
@@ -95,15 +96,19 @@ ros2 launch kfs_alignment kfs_align.launch.py
 
 ### 2. 目标定义与阈值参数组
 * `target.cube_size_mm`: KFS 物理边长的真实毫米数（默认 `100.0`），用于 PnP 相似三角形解算。
-* `target.distance`: 机器人最终希望停留在 KFS 正前方多远的距离（单位：米，默认 `1.2`）。
+* `target.distance`: 机器人最终希望停留在 KFS 正前方多远的距离（单位：米，默认 `0.8`）。
 * `target.yaw`: 期望对齐的最终偏航角（默认 `0.0`，视物理安装夹角而定）。
+* `target.y_offset`: Y 轴物理偏置（默认 `0.0`），用于补偿相机与底盘中心的横向安装误差。
+* `target.z_offset`: Z 轴物理偏置（默认 `0.0`），用于补偿 KFS 在相机画面中的预期高度偏差。
 
 ### 3. 底盘限幅与 PID 参数组 (`kfs_align_controller`)
 当实车出现震荡、冲刺过猛、刹不住车或反应迟钝时，调整此项：
 * `limit.linear_x / y / z`: 限制底盘平移及升降机构的最大输出速度（单位：m/s，推荐赛场安全限制在 `0.3` ~ `0.5` 以内）。
 * `limit.angular_z`: 限制最大车头旋转角速度（单位：rad/s）。
+* `limit.lift_max_mm` / `limit.lift_min_mm`: 抬升机构的安全限幅（单位：mm，默认 `150.0` / `0.0`，请根据实际机械结构修改）。
 * `pid.x`: 前后 PID 参数，格式为 `[Kp, Ki, Kd]`。
 * `pid.y`: 左右平移 PID 参数，用于修正横向漂移。
+* `pid.z`: 垂直抬升 PID 参数，用于高度闭环控制（格式 `[Kp, Ki, Kd]`，默认 `[0.5, 0.0, 0.1]`，建议用较小的 P 值）。
 * `pid.yaw`: 车头旋转对齐 PID 参数。如果车子大范围原地左右频繁猛烈摇头，调小第一个 `Kp` 值。
 
 ---
@@ -125,7 +130,7 @@ ros2 launch kfs_alignment kfs_align.launch.py
 * **开发强制要求**：计算姿态误差时，由于已在代码中移除了强行硬编码补偿，后续开发者需保证 `Target_Yaw` 与物理基准收敛一致。若更换新相机或底盘导致正对目标时数据整体偏移，请重新采集对齐时的裸数据，并修改 YAML 中的 `target.yaw` 达到闭环。
 
 ### ⚠️ 规范三：安全看门狗（Watchdog）与大 dt 限幅
-* 控制器内置了 `watchdog_timer`：若超过 `0.5` 秒未收到 `/cube_pose/pose` 话题（如 YOLO 丢帧或相机断开），控制器会强行向 `/cmd_vel` 发布全零速度实行**急停保护**，防止车子失控乱跑。
+* 控制器内置了 `watchdog_timer`：若超过 `0.5` 秒未收到 `/cube_pose/pose` 话题（如 YOLO 丢帧或相机断开），控制器会强行向 `t0x0101_action` 发布全零速度实行**急停保护**，同时保持当前抬升高度不变，防止车子失控乱跑或抬升机构突然砸落。
 * 为防止网络卡顿或 YOLO 突发耗时导致单帧 `dt` 异常爆大、憋爆 PID 积分项，代码内强制对时间差进行了安全限幅：
   ```python
   # 强制限制最大周期，防止积分饱和风暴
